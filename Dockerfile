@@ -2,14 +2,18 @@
 FROM nvcr.io/nvidia/pytorch:24.07-py3
 
 # Install git and clean up in the same layer
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git ninja-build && rm -rf /var/lib/apt/lists/*
 
 # Update pip and uninstall apex in the same layer
 RUN pip install --no-cache-dir --upgrade pip && \
     pip uninstall -y apex
 
-# Install xfuser with all extras
-RUN pip install "xfuser[diffusers,flash-attn]" flask
+# Install flash-attention separately first to ensure proper CUDA compilation
+RUN pip install packaging && \
+    pip install flash-attn==2.6.3 --no-build-isolation
+
+# Install xfuser without flash-attn (we installed it separately)
+RUN pip install "xfuser[diffusers]" flask
 
 # Copy only the necessary example script
 COPY ./examples/run_flux_docker.py /app/run_flux_docker.py
